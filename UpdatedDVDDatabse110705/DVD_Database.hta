@@ -1,0 +1,339 @@
+<html>
+<HTA:APPLICATION ID="oHTA"
+     APPLICATIONNAME="myApp"
+	 BORDER="thin"
+	 BORDERSTYLE="normal"
+	 CAPTION="yes"
+	 ICON=./Art/callwrap.ico
+	 MAXIMIZEBUTTON="yes"
+	 MINIMIZEBUTTON="yes"
+	 SHOWINTASKBAR="no"
+	 SINGLEINSTANCE="no"
+	 SYSMENU="yes"
+	 VERSION=7.2
+	 WINDOWSTATE="maximize"
+	 contextMenu=no
+  >
+<head>
+
+<script type="text/javascript">
+
+var enablepersist="on" //Enable saving state of content structure using session cookies? (on/off)
+var collapseprevious="Yes" //Collapse previously open content when opening present? (yes/no)
+
+if (document.getElementById){
+document.write('<style type="text/css">')
+document.write('.switchcontent{display:none;}')
+document.write('</style>')
+}
+
+function getElementbyClass(classname){
+ccollect=new Array()
+var inc=0
+var alltags=document.all? document.all : document.getElementsByTagName("*")
+for (i=0; i<alltags.length; i++){
+if (alltags[i].className==classname)
+ccollect[inc++]=alltags[i]
+}
+}
+
+function contractcontent(omit){
+var inc=0
+while (ccollect[inc]){
+if (ccollect[inc].id!=omit)
+ccollect[inc].style.display="none"
+inc++
+}
+}
+
+function expandcontent(cid){
+if (typeof ccollect!="undefined"){
+if (collapseprevious=="yes")
+contractcontent(cid)
+document.getElementById(cid).style.display=(document.getElementById(cid).style.display!="block")? "block" : "none"
+}
+}
+
+function revivecontent(){
+contractcontent("omitnothing")
+selectedItem=getselectedItem()
+selectedComponents=selectedItem.split("|")
+for (i=0; i<selectedComponents.length-1; i++)
+document.getElementById(selectedComponents[i]).style.display="block"
+}
+
+function get_cookie(Name) { 
+var search = Name + "="
+var returnvalue = "";
+if (document.cookie.length > 0) {
+offset = document.cookie.indexOf(search)
+if (offset != -1) { 
+offset += search.length
+end = document.cookie.indexOf(";", offset);
+if (end == -1) end = document.cookie.length;
+returnvalue=unescape(document.cookie.substring(offset, end))
+}
+}
+return returnvalue;
+}
+
+function getselectedItem(){
+if (get_cookie(window.location.pathname) != ""){
+selectedItem=get_cookie(window.location.pathname)
+return selectedItem
+}
+else
+return ""
+}
+
+function saveswitchstate(){
+var inc=0, selectedItem=""
+while (ccollect[inc]){
+if (ccollect[inc].style.display=="block")
+selectedItem+=ccollect[inc].id+"|"
+inc++
+}
+
+document.cookie=window.location.pathname+"="+selectedItem
+}
+
+function do_onload(){
+uniqueidn=window.location.pathname+"firsttimeload"
+getElementbyClass("switchcontent")
+if (enablepersist=="on" && typeof ccollect!="undefined"){
+document.cookie=(get_cookie(uniqueidn)=="")? uniqueidn+"=1" : uniqueidn+"=0" 
+firsttimeload=(get_cookie(uniqueidn)==1)? 1 : 0 //check if this is 1st page load
+if (!firsttimeload)
+revivecontent()
+}
+}
+
+
+if (window.addEventListener)
+window.addEventListener("load", do_onload, false)
+else if (window.attachEvent)
+window.attachEvent("onload", do_onload)
+else if (document.getElementById)
+window.onload=do_onload
+
+if (enablepersist=="on" && document.getElementById)
+window.onunload=saveswitchstate
+
+</script>
+
+
+<title>MY DVD Database.</title>
+
+<script language="vbscript">
+
+Dim conn 'GLOBAL doing this here so that all functions can use it
+
+sub dotheconnection
+
+	Set conn = CreateObject("ADODB.Connection")
+
+	conn.Open "Provider=Microsoft.Jet.OLEDB.4.0; Data Source=./Database/data.mdb; User Id=; Password="
+
+	If conn.errors.count <> 0 Then 
+	
+		alert("problem connecting to the database")
+	else
+		' if connected OK call sub getdata
+		getdata
+
+	end if
+end sub
+
+sub getdata
+
+	SQL_query = "SELECT * FROM dvd ORDER BY Title"
+	Set rsData = conn.Execute(SQL_query)
+
+	strHTML = strHTML & "<table cellspacing='0' cellpadding='4' border='1'><tr><td bgcolor='#000000'>&nbsp;</td><td bgcolor='#000000'><font color='#FFFFFF'><b>Title</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>Length</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>Category</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>Notes</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>&nbsp;</b></font></td></tr>"
+	Do Until rsData.EOF = True
+	strHTML = strHTML & "<tr><td onclick='deleteUser("& rsData("ID") &")' language='vbscript' style='cursor:hand; color:red'>del</td><td>" & rsData("Title") & "</td><td>" & rsData("Length") & " </td> <td>" & rsData("Cat") & " </td> <td>" & rsData("Notes") & " </td><td onclick='editUser("& rsData("ID") &")'language='vbscript' style='cursor:hand; color:red'>Edit</td></tr>"
+	rsData.moveNext ' go to next record
+	Loop
+
+	strHTML = strHTML & "</table>"
+	thediv.innerHTML = strHTML
+
+
+	SQL_query = "SELECT Count(*) AS intTotal FROM dvd"
+	Set rsData = conn.Execute(SQL_query)
+	strHTML1 = strHTML1 & "<b>Number of DVD's in My Database: </b>"
+	strHTML1 = strHTML1 & "" & rsData("intTotal") & ""
+	Count.innerHTML = strHTML1
+end sub
+
+
+sub searchdata
+
+	SQL_query = "SELECT * FROM dvd WHERE Title LIKE '%"& txtsrch.value &"%' OR Notes LIKE '%"& txtsrch.value &"%' ORDER BY Title"
+	Set rsData = conn.Execute(SQL_query)
+    strHTML2 = strHTML2 & "<table cellspacing='0' cellpadding='4' border='1'><tr><td bgcolor='#000000'>&nbsp;</td><td bgcolor='#000000'><font color='#FFFFFF'><b>Title</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>Length</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>Category</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>Notes</b></font></td><td bgcolor='#000000'><font color='#FFFFFF'><b>&nbsp;</b></font></td></tr>"
+	Do Until rsData.EOF = True
+	strHTML2 = strHTML2 & "<tr><td onclick='deleteUser("& rsData("ID") &")' language='vbscript' style='cursor:hand; color:red'>del</td><td>" & rsData("Title") & "</td><td>" & rsData("Length") & " </td> <td>" & rsData("Cat") & " </td> <td>" & rsData("Notes") & " </td><td onclick='editUser("& rsData("ID") &")' language='vbscript' style='cursor:hand; color:red'>Edit</td></tr>"
+	rsData.moveNext ' go to next record
+	Loop
+	strHTML2 = strHTML2 & "</table>"
+	searchIT.innerHTML = strHTML2
+
+end sub
+
+sub deleteUser(id)
+
+	SQL_query = "DELETE * FROM dvd WHERE ID = " & id
+	conn.Execute(SQL_query)
+	getdata
+
+end sub
+
+
+sub addUser
+
+	SQL_query = "INSERT INTO dvd (Title,Length,Notes,Cat) VALUES ('"& txtTitle.value &"','"& txtLength.value &"','"& txtNotes.value &"','"& txtCat.value &"')"
+	conn.Execute(SQL_query)
+	getdata
+	
+end sub
+
+sub editUser(id)
+
+	SQL_query = "SELECT * FROM dvd WHERE ID=" & id
+	Set rsData=conn.Execute(SQL_query)
+	txtTitle.value = rsData("Title")
+	txtLength.value = 	rsData("Length")
+	txtNotes.value = 	rsData("Notes")
+	txtCat.value = 	rsData("Cat")
+	txtID.value = rsData("ID")
+    btnUpdate.disabled = false
+	getdata
+
+end sub
+
+
+sub updateUser
+
+	SQL_query = "UPDATE dvd SET Title='"& txtTitle.value &"', Length='"& txtLength.value &"' , Notes='"& txtNotes.value &"', Cat='"& txtCat.value &"' WHERE ID= " & txtID.value 
+	conn.Execute(SQL_query)
+	getdata
+
+end sub
+
+    
+</script>
+<style>
+<!--
+fieldset     { border: 1 solid #000080 }
+font         { font-family: Verdana; font-size: 10pt }
+-->
+</style>
+</head>
+
+<body onload="dotheconnection" language="vbscript">
+<font face="Verdana" size="2">
+
+
+<input type="button" value="Add / Edit - to Database" onClick="expandcontent('sc1')" style="font-size: 10px; font-family: Arial"></font>
+<input type="button" value="Search Database" onClick="expandcontent('sc2')" style="font-size: 10px; font-family: Arial">
+<div id="sc1" class="switchcontent">
+
+<div align="left">
+  <table border="0" width="500" height="16">
+    <tr>
+      <td width="318" height="8" align="right">
+
+<b><font color="#000080" size="2" face="Verdana">DVD Title:</font></b></td>
+      <td width="294" height="8"><b><font face="Verdana" size="2"><input type="text" name="txtTitle" size="43">
+        </font></b>
+      </td>
+    </tr>
+    <tr>
+      <td width="318" height="10" align="right">
+<b><font color="#000080" size="2" face="Verdana">Length:</font></b> </td>
+      <td width="294" height="10"><b><font face="Verdana" size="2"><input type="text" name="txtLength" size="8"> </font></b> </td>
+    </tr>
+    <tr>
+      <td width="318" height="85" align="right" valign="top">
+<b><font face="Verdana" size="2" color="#000080">Note's</font></b> </td>
+      <td width="294" height="85"><font face="Verdana" size="2">
+		<textarea rows="6" name="txtNotes" cols="42"></textarea></font></td>
+    </tr>
+    <tr>
+      <td width="318" height="11" align="right" valign="top">
+<b>
+<font face="Verdana" size="2" color="#000080">Category:</font> </b> </td>
+      <td width="294" height="11"><font face="Verdana" size="2"><select size="1" name="txtCat">
+          <option value="No Selection Picked">&lt;- Please Select - &gt;</option>
+          <option value="Action/Adventure">Action/Adventure</option>
+          <option value="Comedy">Comedy</option>
+          <option value="Drama">Drama</option>
+          <option value="Fantasy">Fantasy</option>
+          <option value="Horror/Occult">Horror/Occult</option>
+          <option value="Martial Arts">Martial Arts</option>
+          <option value="Mystery/Whodunnit">Mystery/Whodunnit</option>
+          <option value="Sports">Sports</option>
+          <option value="War">War</option>
+          <option value="Childrens">Childrens</option>
+          <option value="Documentaries &amp; Biographies">Documentaries &amp;
+          Biographies</option>
+          <option value="Family">Family</option>
+          <option value="General Interest (Leisure/Health)">General Interest
+          (Leisure/Health)</option>
+          <option value="Living World/Universe">Living World/Universe</option>
+          <option value="Music/Performing Arts">Music/Performing Arts</option>
+          <option value="Science Fiction">Science Fiction</option>
+          <option value="Thriller">Thriller</option>
+          <option value="Westerns">Westerns</option>
+        </select> </font> </td>
+    </tr>
+    <tr>
+      <td width="318" height="5" align="right">
+ </td>
+      <td width="294" height="5"> 
+        <p align="left"><b><font face="Verdana" size="2"> <input type="button" value="add" onclick="addUser" language="vbscript">
+      <input type="button" name="btnUpdate" disabled value="update" onclick="updateUser" language="vbscript"><input type="hidden" name="txtID">
+        </font></b></p>
+ </td>
+    </tr>
+  </table>
+</div>
+</div>
+<div id="sc2" class="switchcontent">
+
+<div align="left">
+ <table border="0" width="627" height="16">
+    <tr>
+      <td width="126" height="8" align="right">
+
+<b><font color="#000080" size="2" face="Verdana">Search :</font></b></td>
+     <td width="487" height="8"><b><font face="Verdana" size="2"><input type="text" name="txtsrch" size="43"></font></b><input type="button" name="btnSearch" value="Search" onclick="searchdata" language="vbscript">
+      </td>
+      </tr><tr><td width="126"></td><td width="487"><b><font color="#000080" size="2" face="Verdana">i.e
+        You can search on Title & Notes</font></b>
+      </td>
+    </tr>
+      </table>
+</div>
+
+<fieldset>
+<legend><b><font face="Verdana" size="2">Search Results.</font></b></legend>
+<center><div style="width: 600; height: 100; overflow: auto; border: 0px solid black" id="searchIT"></div>
+</center>
+</fieldset>
+
+<fieldset>
+<legend><b><font face="Verdana" size="2">DVD Count.</font></b></legend>
+<center><div style="width: 600; height: 50; overflow: auto; border: 0px solid black" id="Count"></div>
+</center>
+</fieldset>
+
+<fieldset>
+<legend><b><font face="Verdana" size="2">Database Display.</font></b></legend>
+<center><div style="width: 600; height: 362; overflow: auto; border: 0px solid black" id="thediv"></div>
+</center>
+</fieldset>
+
+<center>
+</script>
